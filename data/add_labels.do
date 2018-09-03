@@ -1,4 +1,3 @@
-cd "/Users/LawrenceDeGeest/Desktop/notebook/research/dissertation/second_paper/defending-pg-cpr/data"
 use full_data, clear
 label define treatment 1 "CPR" 2 "PG"
 label values treatment treatment
