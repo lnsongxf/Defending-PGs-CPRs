@@ -102,3 +102,16 @@ tw	(connected deterrence period if treatment == 1, sort) ///
 // combined plot	
 grc1leg surplus net_surplus loss deterrence, legendfrom(surplus) cols(2)
 restore	
+*===============================================================================
+* standard deviation over time
+*===============================================================================
+preserve
+keep if type == 1
+collapse (sd) invest, by(treatment theft period)
+tw	(connected invest period if theft == 1, sort) ///
+	(connected invest period if theft == 2, sort), ///
+	by(treatment, note("")) /// 
+	xlabel(1(2)15) ///
+	xtitle("Period") ytitle("Standard deviation of investment") /// 
+	legend(cols(2) order(1 "Theft" 2 "No Theft"))
+restore	

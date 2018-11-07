@@ -40,6 +40,3 @@ end
 
 use full_data_labels, clear
 group_autocorr
-
-
-		
