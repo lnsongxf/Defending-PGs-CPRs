@@ -4,7 +4,6 @@
 * last updated: 11/2/18
 *===============================================================================
 
-cd /Users/LawrenceDeGeest/Desktop/notebook/research/Defending-PGs-CPRs/data
 use full_data_labels, clear
 
 *===============================================================================
@@ -144,59 +143,49 @@ tabstat assigned, by(treatment) stat(mean sd) nototal
 global base_controls i.treatment period coop_index lassigned surplus_loss_per
 global dem_controls age gpa i.gender
 global treatment_controls period coop_index lassigned surplus_loss_per
-// run models
-qui eststo m1: probit assigned $base_controls $dem_controls, nolog cluster(group)
-qui eststo m1_margin: margins, dydx(*) post
-qui eststo m2: tnbreg assigned $base_controls $dem_controls if assigned>0, nolog cluster(group)
-qui eststo m2_margin: margins, dydx(*) post
-restore
-// export models
-esttab m1 m1_margin m2 m2_margin using estimate_sanctions.tex, replace ///
+// run models:
+// 1. extensive margin
+qui eststo m1: probit assigned $base_controls $dem_controls i.treatment#c.lassigned 2.treatment#c.coop_index, nolog cluster(group)
+qui margins, dydx(2.treatment) at(coop_index = (0(0.1)1)) vce(unconditional)
+marginsplot, name(p1, replace) ///
+	yline(0) ylabel(-0.2(.2)0.6) ///
+	subtitle("{bf:A}", ring(0) pos(10) size(large)) ///
+	xtitle("Cooperation (surplus creation)") ytitle("Pr(sanction)") title("Extensive margin") nodraw
+qui margins, dydx(2.treatment) at(lassigned = (0(2)20)) vce(unconditional)
+marginsplot, name(p2, replace) ///
+	yline(0) ylabel(-0.2(.2)0.6) ///
+	subtitle("{bf:C}", ring(0) pos(10) size(large)) ///
+	xtitle("Lagged sanctions") ytitle("Pr(sanction)") title("Extensive margin") nodraw
+qui eststo m1_margin: margins, dydx(*) post vce(unconditional)	
+// 2. intensive margin
+qui eststo m2: tnbreg assigned $base_controls $dem_controls 2.treatment#c.lassigned 2.treatment#c.coop_index if assigned>0, nolog cluster(group)
+qui margins, dydx(2.treatment) at(coop_index = (0(0.1)1)) vce(unconditional)
+marginsplot, name(p3, replace) ///
+	yline(0) ylabel(-10(10)30) ///
+	subtitle("{bf:B}", ring(0) pos(10) size(large)) ///
+	xtitle("Cooperation (surplus creation)") ytitle("Expected sanctions") title("Intensive margin") nodraw
+qui margins, dydx(2.treatment) at(lassigned = (0(2)20)) vce(unconditional)
+marginsplot, name(p4, replace) /// 
+	yline(0) ylabel(-10(10)30) ///
+	subtitle("{bf:D}", ring(0) pos(10) size(large)) ///
+	xtitle("Lagged sanctions") ytitle("Expected sanctions") title("Intensive margin") nodraw
+qui eststo m2_margin: margins, dydx(*) post vce(unconditional)	
+// 3. joint plot
+gr combine p1 p3 p2 p4	
+// 4. table
+esttab m1 m1_margin m2 m2_margin using estimate_sanctions_update.tex, replace ///
 	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
-	stats(N chi2 r2_p, fmt(0 3 3) labels("N" "Wald Chi-squared" "Pseudo R-squared")) ///
+	stats(N r2_p, fmt(0 3) labels("N" "Pseudo R-squared")) ///
 	numbers nodepvars nomtitles booktabs collabels(none) ///
 	mgroups("Intensive margin" "Extensive margin", pattern(1 0 1 0) prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span})) ///
-	drop(1.treatment 1.gender) ///
+	drop(1.treatment 1.gender 1.treatment#c.lassigned) ///
 	varlabels(_cons Constant age Age 2.gender Gender gpa GPA period Period ///
-		2.treatment PG coop_index "Cooperation (Allocation)" ///
-		lassigned "Sanctions in {it:t-1}" ///
-		surplus_value "Surplus Value" surplus_loss_per "Surplus Loss (Individual)")
-*=======================
-// update: reviwer's interaction tests
-*=======================
-/// original
-qui eststo m1: probit assigned $base_controls $dem_controls, nolog cluster(group)
-qui eststo m1_margin: margins, dydx(*) vce(unconditional)
-qui eststo m2: tnbreg assigned $base_controls $dem_controls if assigned>0, nolog cluster(group)
-qui eststo m2_margin: margins, dydx(*) vce(unconditional)
-/// new
-qui eststo m3: probit assigned $base_controls $dem_controls c.coop_index#c.lassigned, nolog cluster(group)
-qui margins, dydx(coop_index) at(lassigned =(0(2)20)) vce(unconditional)
-marginsplot, name(em, replace) title("Extensive margin") xtitle("Lagged sanctions") nodraw
-qui eststo m3_margin: margins, dydx(*) vce(unconditional)
-qui eststo m4: tnbreg assigned $base_controls $dem_controls c.coop_index#c.lassigned if assigned>0, nolog cluster(group)
-qui margins, dydx(coop_index) at(lassigned =(0(2)20)) vce(unconditional)
-marginsplot, name(im, replace) title ("Intensive margin") xtitle("Lagged sanctions") nodraw
-qui eststo m4_margin: margins, dydx(*) vce(unconditional)
-// export models
-esttab m1 m3 m1_margin m3_margin m2 m4 m2_margin m4_margin using estimate_sanctions_update.tex, replace ///
-	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
-	stats(N chi2 r2_p, fmt(0 3 3) labels("N" "Wald Chi-squared" "Pseudo R-squared")) ///
-	numbers nodepvars nomtitles booktabs collabels(none) ///
-	mgroups("Extensive margin" "Extensive margin" "Intensive margin" "Intensive margin", pattern(1 0 1 0 1 0 1 0) prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span})) ///
-	drop(1.treatment 1.gender) ///
-	varlabels(_cons Constant age Age 2.gender Gender gpa GPA period Period ///
-		2.treatment PG coop_index "Cooperation (surplus creation)" ///
-		lassigned "Sanctions in t-1" ///
-		c.coop_index#c.lassigned "Cooperation (surplus creation) X Sanctions in t-1" ///
-		surplus_value "Surplus Value" surplus_loss_per "Surplus Loss (Individual)" ///
-		2.treatment#c.coop_index "PG X Cooperation" 2.treatment#c.lassigned "Lagged Sanctions" ///
-		)
-gr combine em im 
+	2.treatment PG coop_index "Cooperation (surplus creation)" ///
+	lassigned "Lagged sanctions" ///
+	surplus_value "Surplus Value" surplus_loss_per "Surplus Loss (Individual)" ///
+	2.treatment#c.coop_index "PG X Cooperation (surplus creation)" 2.treatment#c.lassigned "PG X Lagged Sanctions" ///
+	)
 restore
-
-
-esttab m1 m3 m1_margin m3_margin m2 m4 m2_margin m4_margin, mgroups("Extensive margin" "Intensive margin", pattern(1 0 0))
 *===============================================================================
 * Table 8
 *===============================================================================

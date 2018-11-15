@@ -105,6 +105,7 @@ restore
 *===============================================================================
 * standard deviation over time
 *===============================================================================
+// individual
 preserve
 keep if type == 1
 collapse (sd) invest, by(treatment theft period)
@@ -113,5 +114,26 @@ tw	(connected invest period if theft == 1, sort) ///
 	by(treatment, note("")) /// 
 	xlabel(1(2)15) ///
 	xtitle("Period") ytitle("Standard deviation of investment") /// 
-	legend(cols(2) order(1 "Theft" 2 "No Theft"))
+	legend(cols(2) order(1 "Theft" 2 "No Theft")) ///
+	name(sd_ind, replace) nodraw
 restore	
+// group
+preserve
+keep if type == 1
+collapse (sd) invest, by(treatment group theft period)
+gen group_n = group - (treatment*1000 + theft*100 + 10)
+tw	(connected invest period if group_n == 1, sort) ///
+	(connected invest period if group_n == 2, sort) ///
+	(connected invest period if group_n == 3, sort) ///
+	(connected invest period if group_n == 4, sort) ///
+	(connected invest period if group_n == 5, sort) ///
+	(connected invest period if group_n == 6, sort), ///
+	by(treatment theft, note("") legend(off)) ///
+	xlabel(1(2)15) ///
+	xtitle("Period") ytitle("Standard deviation of investment (Group)") /// 
+	legend(cols(2) order(1 "Theft" 2 "No Theft")) ///
+	name(sd_group, replace) nodraw 
+restore	
+
+// combined
+gr combine sd_ind sd_group, xsize(12.0) ysize(5.0)
