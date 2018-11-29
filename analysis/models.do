@@ -1,7 +1,7 @@
 *===============================================================================
 * Empirical models for "Defending public goods and common-pool resources" (De Geest & Stranlund)
 * author: @lrdegeest
-* last updated: 11/25/18
+* last updated: 11/29/18
 *===============================================================================
 
 use full_data_labels, clear
@@ -117,15 +117,13 @@ esttab m1_1 m2_1 m3_1 m1_2 m2_2 m3_2 using insiders_theft_notheft_coopindex.tex,
 *===============================================================================
 * Table 6
 *===============================================================================
-use full_data_labels, clear
-preserve
 xtset subject period
 forvalues i = 1/2 { // treatment
 	di "treatment = " `i'
 	forvalues j = 1/2 { // theft
 		di "theft = " `j'
 		preserve
-		qui keep if treatment == `i' & theft == `j'
+		qui keep if treatment == `i' & theft == `j' & type == 1
 		qui xtreg invest i.group i.period, re cluster(group)
 		predict resid, e
 		gen d = abs(resid)
@@ -136,7 +134,6 @@ forvalues i = 1/2 { // treatment
 		restore
 	}
 }		
-restore
 *===============================================================================
 * Table 7
 *===============================================================================
@@ -158,38 +155,38 @@ qui margins, dydx(2.treatment) at(coop_index = (0(0.1)1)) vce(unconditional)
 marginsplot, name(p1, replace) ///
 	yline(0) ylabel(-0.2(.2)0.6) ///
 	subtitle("{bf:A}", ring(0) pos(10) size(large)) ///
-	xtitle("Cooperation (surplus creation)") ytitle("Pr(sanction)") title("PG") nodraw
+	xtitle("Cooperation (surplus creation)") ytitle("Effects on Pr(sanction)") title("PG") nodraw
 qui margins, at(coop_index = (0(0.1)1)) vce(unconditional)
 marginsplot, name(p2, replace) ///
 	yline(0) ylabel(-0.2(.2)0.6) ///
 	subtitle("{bf:B}", ring(0) pos(10) size(large)) ///
-	xtitle("Cooperation (surplus creation)") ytitle("Pr(sanction)") title("CPR") nodraw
+	xtitle("Cooperation (surplus creation)") ytitle("Effects on Pr(sanction)") title("CPR") nodraw
 qui margins, dydx(2.treatment) at(lassigned = (0(2)20)) vce(unconditional)
 marginsplot, name(p3, replace) ///
 	yline(0) ylabel(-0.2(.2)0.6) ///
 	subtitle("{bf:C}", ring(0) pos(10) size(large)) ///
-	xtitle("Lagged sanctions") ytitle("Pr(sanction)") title("PG") nodraw
+	xtitle("Lagged sanctions") ytitle("Effects on Pr(sanction)") title("PG") nodraw
 qui margins, at(lassigned = (0(2)20)) vce(unconditional)
 marginsplot, name(p4, replace) ///
 	yline(0) ylabel(-0.2(.2)0.6) ///
 	subtitle("{bf:D}", ring(0) pos(10) size(large)) ///
-	xtitle("Lagged sanctions") ytitle("Pr(sanction)") title("CPR") nodraw	
+	xtitle("Lagged sanctions") ytitle("Effects on Pr(sanction)") title("CPR") nodraw	
 qui eststo m1_margin: margins, dydx(*) post vce(unconditional)	
 // 2. intensive margin
 qui eststo m2: tnbreg assigned $base_controls $dem_controls $interactions if assigned>0, nolog cluster(group)
 qui margins, dydx(2.treatment) at(coop_index = (0(0.1)1)) vce(unconditional)
-marginsplot, name(p3, replace) ///
+marginsplot, name(p5, replace) ///
 	yline(0) ylabel(-10(10)30) ///
 	subtitle("{bf:B}", ring(0) pos(10) size(large)) ///
 	xtitle("Cooperation (surplus creation)") ytitle("Expected sanctions") title("Intensive margin") nodraw
 qui margins, dydx(2.treatment) at(lassigned = (0(2)20)) vce(unconditional)
-marginsplot, name(p4, replace) /// 
+marginsplot, name(p6, replace) /// 
 	yline(0) ylabel(-10(10)30) ///
 	subtitle("{bf:D}", ring(0) pos(10) size(large)) ///
 	xtitle("Lagged sanctions") ytitle("Expected sanctions") title("Intensive margin") nodraw
 qui eststo m2_margin: margins, dydx(*) post vce(unconditional)	
 // 3. joint plot
-gr combine p1 p3 p2 p4	
+gr combine p1 p2 p3 p4	
 // 4. table
 esttab m1 m1_margin m2 m2_margin using estimate_sanctions_update.tex, replace ///
 	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
@@ -242,7 +239,7 @@ foreach i in 1 2 {
 	qui estadd local group_clustered_se "No"	
 }	
 // export models
-esttab m1_1 m2_1 m3_1 m1_2 m2_2 m3_2 using estimate_sanctions_update.tex, replace ///
+esttab m1_1 m2_1 m3_1 m1_2 m2_2 m3_2 using outsider_sanctions_update.tex, replace ///
 	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
 	scalars("group_re Group random effects" "group_clustered_se Group clustered SEs") ///
 	numbers nodepvars nomtitles booktabs ///
