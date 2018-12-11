@@ -5,23 +5,9 @@
 *===============================================================================
 
 use full_data_labels, clear
-xtset subject period
-
-esttab m_1 m_2 using appendix_table1.tex, replace ///
-	cells(b(star fmt(3)) se(par fmt(2))) ///
-	stats(N r2_o, fmt(0 3) labels("N" "R-squared overall")) ///
-	mgroups("CPR" "PG", pattern(1 0 1 0) prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span})) ///	
-	numbers nodepvars mlabels("Allocation" "Cooperation" "Allocation" "Cooperation") booktabs ///
-	drop(1.theft) ///
-	label legend  ///
-	collabels(none) ///
-	varlabels(_cons Constant 2.theft Theft)
-	
-
-
 
 //==============================================================================
-// page 14
+// no theft
 //==============================================================================
 preserve
 keep if type == 1
@@ -30,17 +16,20 @@ qui eststo m_all: xtreg coop_index i.treatment if theft == 2, re cluster(group)
 test 2.treatment
 foreach i in 1 2 {
 	qui eststo m_`i': xtreg coop_index i.theft if treatment == `i', re cluster(group)
+	di "treatment = " `i'
 	test 2.theft
+	di " "
 }
-collapse (mean) coop_index, by(treatment theft group)
-ranksum coop_index if theft == 2 & inlist(treatment, 1, 2), by(treatment) 
-ranksum invest if treatment == 1 & inlist(theft, 1, 2), by(theft)
-ranksum invest if treatment == 2 & inlist(theft, 1, 2), by(theft)
 restore
 
+preserve
+keep if type == 1 & theft == 1
+qui xtreg coop_index i.treatment, re 
+test 2.treatment
+restore
 
 //==============================================================================
-// page 18
+// theft
 //==============================================================================
 // surplus
 preserve
@@ -65,7 +54,7 @@ ranksum net_surplus, by(treatment)
 restore
 
 //==============================================================================
-// page 19
+// sanctions
 //==============================================================================
 // deterrence
 preserve 
@@ -74,17 +63,17 @@ gen deter_index = (assigned*3)/surplus_loss_per if surplus_loss_per > 0
 replace deter_index = 1 if deter_index > 1
 qui xtreg deter_index i.treatment, re cluster(group)
 test 2.treatment
-collapse (mean) deter_index, by(treatment theft group)
-ranksum deter_index, by(treatment)
+//collapse (mean) deter_index, by(treatment theft group)
+//ranksum deter_index, by(treatment)
 restore
 
 // sanctions assigned
 preserve
 keep if type == 1 & theft == 2
-xtreg points_assigned i.treatment if points_assigned > 0, re cluster(group)
+qui xtreg points_assigned i.treatment if points_assigned > 0, re cluster(group)
 test 2.treatment
-collapse (mean) points_assigned, by(treatment theft group)
-ranksum points_assigned, by(treatment)
+qui xtreg points_assigned i.treatment, re cluster(group)
+test 2.treatment
 restore
 
 // payoffs

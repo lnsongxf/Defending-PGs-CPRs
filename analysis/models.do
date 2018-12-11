@@ -144,63 +144,37 @@ gen lassigned = l.assigned
 // confirm overdispersion
 tabstat assigned, by(treatment) stat(mean sd) nototal
 // set controls
-global base_controls i.treatment period coop_index lassigned surplus_loss_per
+gen treatment_recode = cond(treatment == 2, 1, 0)
+global base_controls period i.treatment_recode##c.coop_index i.treatment_recode##c.lassigned i.treatment_recode##c.surplus_loss_per
 global dem_controls age gpa i.gender
-global treatment_controls period coop_index lassigned surplus_loss_per
-global interactions i.treatment#c.lassigned i.treatment#c.coop_index i.treatment#c.surplus_loss_per
+global margin_vars "coop_index lassigned surplus_loss_per"
 // run models:
 // 1. extensive margin
-qui eststo m1: probit assigned $base_controls $dem_controls $interactions, nolog cluster(group)
-qui margins, dydx(2.treatment) at(coop_index = (0(0.1)1)) vce(unconditional)
-marginsplot, name(p1, replace) ///
-	yline(0) ylabel(-0.2(.2)0.6) ///
-	subtitle("{bf:A}", ring(0) pos(10) size(large)) ///
-	xtitle("Cooperation (surplus creation)") ytitle("Effects on Pr(sanction)") title("PG") nodraw
-qui margins, at(coop_index = (0(0.1)1)) vce(unconditional)
-marginsplot, name(p2, replace) ///
-	yline(0) ylabel(-0.2(.2)0.6) ///
-	subtitle("{bf:B}", ring(0) pos(10) size(large)) ///
-	xtitle("Cooperation (surplus creation)") ytitle("Effects on Pr(sanction)") title("CPR") nodraw
-qui margins, dydx(2.treatment) at(lassigned = (0(2)20)) vce(unconditional)
-marginsplot, name(p3, replace) ///
-	yline(0) ylabel(-0.2(.2)0.6) ///
-	subtitle("{bf:C}", ring(0) pos(10) size(large)) ///
-	xtitle("Lagged sanctions") ytitle("Effects on Pr(sanction)") title("PG") nodraw
-qui margins, at(lassigned = (0(2)20)) vce(unconditional)
-marginsplot, name(p4, replace) ///
-	yline(0) ylabel(-0.2(.2)0.6) ///
-	subtitle("{bf:D}", ring(0) pos(10) size(large)) ///
-	xtitle("Lagged sanctions") ytitle("Effects on Pr(sanction)") title("CPR") nodraw	
-qui eststo m1_margin: margins, dydx(*) post vce(unconditional)	
+qui eststo m1: probit assigned $base_controls $dem_controls, cluster(group)
+foreach v in $margin_vars {
+    margins, dydx(`v') over(r.treatment_recode) vce(unconditional) 
+}
+qui eststo m1_margin: margins, dydx(*) vce(unconditional) post
 // 2. intensive margin
 qui eststo m2: tnbreg assigned $base_controls $dem_controls $interactions if assigned>0, nolog cluster(group)
-qui margins, dydx(2.treatment) at(coop_index = (0(0.1)1)) vce(unconditional)
-marginsplot, name(p5, replace) ///
-	yline(0) ylabel(-10(10)30) ///
-	subtitle("{bf:B}", ring(0) pos(10) size(large)) ///
-	xtitle("Cooperation (surplus creation)") ytitle("Expected sanctions") title("Intensive margin") nodraw
-qui margins, dydx(2.treatment) at(lassigned = (0(2)20)) vce(unconditional)
-marginsplot, name(p6, replace) /// 
-	yline(0) ylabel(-10(10)30) ///
-	subtitle("{bf:D}", ring(0) pos(10) size(large)) ///
-	xtitle("Lagged sanctions") ytitle("Expected sanctions") title("Intensive margin") nodraw
-qui eststo m2_margin: margins, dydx(*) post vce(unconditional)	
-// 3. joint plot
-gr combine p1 p2 p3 p4	
+foreach v in $margin_vars {
+    margins, dydx(`v') over(r.treatment_recode) vce(unconditional) 
+}
+qui eststo m2_margin: margins, dydx(*) vce(unconditional) post
+restore
 // 4. table
 esttab m1 m1_margin m2 m2_margin using estimate_sanctions_update.tex, replace ///
 	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
 	stats(N r2_p, fmt(0 3) labels("N" "Pseudo R-squared")) ///
 	numbers nodepvars nomtitles booktabs collabels(none) ///
 	mgroups("Extensive margin" "Intensive margin", pattern(1 0 1 0) prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span})) ///
-	drop(1.treatment 1.gender 1.treatment#c.lassigned  1.treatment#c.coop_index 1.treatment#c.surplus_loss_per) ///
+	drop(0.treatment_recode 1.gender 0.treatment_recode#c.lassigned  0.treatment_recode#c.coop_index 0.treatment_recode#c.surplus_loss_per) ///
 	varlabels(_cons Constant age Age 2.gender Gender gpa GPA period Period ///
-	2.treatment PG coop_index "Cooperation (surplus creation)" ///
+	1.treatment_recode  PG coop_index "Cooperation (surplus creation)" ///
 	lassigned "Lagged sanctions" ///
 	surplus_value "Surplus Value" surplus_loss_per "Surplus Loss (Individual)" ///
-	2.treatment#c.coop_index "PG X Cooperation (surplus creation)" 2.treatment#c.lassigned "PG X Lagged Sanctions" 2.treatment#c.surplus_loss_per "PG X Surplus loss (individual)" ///
+	1.treatment_recode#c.coop_index "PG X Cooperation (surplus creation)" 1.treatment_recode#c.lassigned "PG X Lagged Sanctions" 1.treatment_recode#c.surplus_loss_per "PG X Surplus loss (individual)" ///
 	)
-restore
 *===============================================================================
 * Table 8
 *===============================================================================
@@ -235,7 +209,7 @@ foreach i in 1 2 {
 	qui estadd local group_re "Yes"
 	qui estadd local group_clustered_se "Yes"
 	qui eststo m3_`i': mixed invest $base_controls $dem_controls || group: || subject: if ldiff == `i', mle 
-	qui estadd local group_re "No"
+	qui estadd local group_re "Yes"
 	qui estadd local group_clustered_se "No"	
 }	
 // export models
