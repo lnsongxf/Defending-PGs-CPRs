@@ -1,7 +1,7 @@
 *===============================================================================
 * Empirical models for "Defending public goods and common-pool resources" (De Geest & Stranlund)
 * author: @lrdegeest
-* last updated: 11/29/18
+* last updated: 12/17/18
 *===============================================================================
 
 use full_data_labels, clear
@@ -63,15 +63,6 @@ qui eststo m3: mixed coop_index $base_controls $dem_controls || group: || subjec
 qui estadd local group_re "Yes"
 qui estadd local group_clustered_se "No"
 // export models 
-esttab m1 m2 m3, ///
-	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
-	scalars("group_re Group random effects" "group_clustered_se Group clustered SEs") ///
-	numbers nodepvars nomtitles ///
-	label legend  ///
-	collabels(none) ///
-	drop(lns1_1_1:_cons lns2_1_1:_cons lnsig_e:_cons) ///
-	varlabels(_cons Constant age Age gender Gender gpa GPA period Period ///
-		2.treatment PG 2.treatment#c.period "PG x Period")
 esttab m1 m2 m3 using pg_vs_cpr_theft.tex, replace ///
 	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
 	scalars("group_re Group random effects" "group_clustered_se Group clustered SEs") ///
@@ -104,6 +95,7 @@ foreach i in 1 2 {
 	qui estadd local group_clustered_se "No"	
 }
 restore
+// export models 
 esttab m1_1 m2_1 m3_1 m1_2 m2_2 m3_2 using insiders_theft_notheft_coopindex.tex, replace ///
 	cells(b(star fmt(3)) se(par fmt(2))) star(* 0.10 ** 0.05 *** 0.01) ///
 	scalars("group_re Group random effects" "group_clustered_se Group clustered SEs") ///

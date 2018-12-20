@@ -1,17 +1,17 @@
 *===============================================================================
 * Statistical tests for "Defending public goods and common-pool resources" (De Geest & Stranlund)
 * author: @lrdgeest
-* last updated: 10/11/18
+* last updated: 12/13/18
 *===============================================================================
 
 use full_data_labels, clear
+xtset subject period
 
 //==============================================================================
-// no theft
+// no theft/theft
 //==============================================================================
 preserve
 keep if type == 1
-xtset subject period
 qui eststo m_all: xtreg coop_index i.treatment if theft == 2, re cluster(group)	
 test 2.treatment
 foreach i in 1 2 {
@@ -63,8 +63,6 @@ gen deter_index = (assigned*3)/surplus_loss_per if surplus_loss_per > 0
 replace deter_index = 1 if deter_index > 1
 qui xtreg deter_index i.treatment, re cluster(group)
 test 2.treatment
-//collapse (mean) deter_index, by(treatment theft group)
-//ranksum deter_index, by(treatment)
 restore
 
 // sanctions assigned
@@ -76,11 +74,11 @@ qui xtreg points_assigned i.treatment, re cluster(group)
 test 2.treatment
 restore
 
+//==============================================================================
 // payoffs
+//==============================================================================
 preserve
 keep if type == 1 & theft == 2
 qui xtreg profit i.treatment, re cluster(group)
 test 2.treatment
-collapse (mean) profit, by(treatment theft group)
-ranksum profit, by(treatment)
 restore
