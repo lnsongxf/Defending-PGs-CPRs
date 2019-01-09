@@ -1,13 +1,15 @@
 *===============================================================================
 * Autocorrelation stats for "Defending public goods and common-pool resources" (De Geest & Stranlund)
 * author: @lrdgeest
-* last updated: 10/19/18
+* last updated: 01/08/19
 *===============================================================================
 
 capture program drop group_autocorr
 program define group_autocorr
+	version 15
+	syntax [if]
 	keep if type == 1
-	collapse (sum) invest, by(treatment theft group period)
+	collapse (sum) invest `if', by(treatment theft group period)
 	xtset group period
 	gen linvest = l.invest
 	qui tab group
@@ -38,5 +40,15 @@ program define group_autocorr
 	esttab matrix(corrs)
 end
 
+cd "/Users/LawrenceDeGeest/Desktop/notebook/research/Defending-PGs-CPRs/data"
+
+// all periods
 use full_data_labels, clear
 group_autocorr
+
+// periods 7-15
+use full_data_labels, clear
+group_autocorr if period > 6
+
+
+collapse (sum) invest, by(treatment theft group period) 
