@@ -49,6 +49,3 @@ group_autocorr
 // periods 7-15
 use full_data_labels, clear
 group_autocorr if period > 6
-
-
-collapse (sum) invest, by(treatment theft group period) 
